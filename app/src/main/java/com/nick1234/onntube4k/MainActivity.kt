@@ -35,7 +35,17 @@ class MainActivity : Activity() {
         web.webChromeClient = WebChromeClient()
         web.addJavascriptInterface(TubeBridge(), "AndroidTube")
         setContentView(web)
-        web.loadUrl("file:///android_asset/index.html")
+
+        // A file:// page has no normal HTTP referrer. Give the bundled page a
+        // stable HTTPS base URL so the YouTube iframe receives a referrer.
+        val html = assets.open("index.html").bufferedReader().use { it.readText() }
+        web.loadDataWithBaseURL(
+            "https://localhost/",
+            html,
+            "text/html",
+            "UTF-8",
+            null
+        )
     }
 
     inner class TubeBridge {
