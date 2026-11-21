@@ -17,6 +17,9 @@ class MainActivity : Activity() {
     private lateinit var web: WebView
     private val executor = Executors.newSingleThreadExecutor()
     @Volatile private var playerOpen = false
+    private val youtubeApiKey: String by lazy {
+        String(android.util.Base64.decode(BuildConfig.YOUTUBE_API_KEY_B64, android.util.Base64.DEFAULT), Charsets.UTF_8)
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,14 +41,14 @@ class MainActivity : Activity() {
     inner class TubeBridge {
         @JavascriptInterface
         fun search(query: String) {
-            if (BuildConfig.YOUTUBE_API_KEY.isBlank()) {
+            if (youtubeApiKey.isBlank()) {
                 sendError("Add your YOUTUBE_API_KEY in GitHub Actions Secrets before building.")
                 return
             }
             executor.execute {
                 try {
                     val q = URLEncoder.encode(query, "UTF-8")
-                    val requestUrl = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=20&q=" + q + "&key=" + BuildConfig.YOUTUBE_API_KEY
+                    val requestUrl = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=20&q=" + q + "&key=" + URLEncoder.encode(youtubeApiKey, "UTF-8")
                     val connection = URL(requestUrl).openConnection() as HttpURLConnection
                     connection.connectTimeout = 12000
                     connection.readTimeout = 15000
