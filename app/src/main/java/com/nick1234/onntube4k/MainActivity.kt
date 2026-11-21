@@ -16,7 +16,7 @@ import java.util.concurrent.Executors
 class MainActivity : Activity() {
     private lateinit var web: WebView
     private val executor = Executors.newSingleThreadExecutor()
-    private var playerOpen = false
+    @Volatile private var playerOpen = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,7 +26,7 @@ class MainActivity : Activity() {
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true
         web.settings.mediaPlaybackRequiresUserGesture = true
-        web.settings.allowFileAccess = false
+        web.settings.allowFileAccess = true
         web.settings.allowContentAccess = false
         web.webViewClient = WebViewClient()
         web.webChromeClient = WebChromeClient()
@@ -45,8 +45,8 @@ class MainActivity : Activity() {
             executor.execute {
                 try {
                     val q = URLEncoder.encode(query, "UTF-8")
-                    val endpoint = URL("https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=20&q=$\{BuildConfig.YOUTUBE_API_KEY}")
-                    val connection = endpoint.openConnection() as HttpURLConnection
+                    val requestUrl = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=20&q=" + q + "&key=" + BuildConfig.YOUTUBE_API_KEY
+                    val connection = URL(requestUrl).openConnection() as HttpURLConnection
                     connection.connectTimeout = 12000
                     connection.readTimeout = 15000
                     connection.requestMethod = "GET"
@@ -54,7 +54,7 @@ class MainActivity : Activity() {
                     val stream = if (code in 200..299) connection.inputStream else connection.errorStream
                     val body = stream.bufferedReader().use { it.readText() }
                     connection.disconnect()
-                    if (code !in 200..299) throw IllegalStateException("YouTube API error ($code): " + JSONObject(body).optJSONObject("error")?.optString("message", "Request failed"))
+                    if (code !in 200..299) throw IllegalStateException("YouTube API error (" + code + "): " + JSONObject(body).optJSONObject("error")?.optString("message", "Request failed"))
                     val items = JSONObject(body).optJSONArray("items") ?: JSONArray()
                     val videos = JSONArray()
                     for (i in 0 until items.length()) {
@@ -69,7 +69,7 @@ class MainActivity : Activity() {
                         videos.put(JSONObject().put("id", id).put("title", snippet.optString("title"))
                             .put("channel", snippet.optString("channelTitle")).put("thumbnail", image))
                     }
-                    runOnUiThread { web.evaluateJavascript("showResults($\{JSONObject.quote(videos.toString())})", null) }
+                    runOnUiThread { web.evaluateJavascript("showResults(" + JSONObject.quote(videos.toString()) + ")", null) }
                 } catch (e: Exception) {
                     sendError(e.message ?: "Search failed. Check your connection and API settings.")
                 }
@@ -80,7 +80,7 @@ class MainActivity : Activity() {
     }
 
     private fun sendError(message: String) {
-        runOnUiThread { web.evaluateJavascript("showError($\{JSONObject.quote(message)})", null) }
+        runOnUiThread { web.evaluateJavascript("showError(" + JSONObject.quote(message) + ")", null) }
     }
 
     @Deprecated("Deprecated in Android")
@@ -90,6 +90,7 @@ class MainActivity : Activity() {
             playerOpen = false
         } else super.onBackPressed()
     }
+
     override fun onDestroy() {
         executor.shutdownNow()
         web.destroy()
