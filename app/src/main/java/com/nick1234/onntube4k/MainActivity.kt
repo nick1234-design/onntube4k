@@ -2,6 +2,7 @@ package com.nick1234.onntube4k
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
+import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebView
@@ -36,16 +37,22 @@ class MainActivity : Activity() {
         web.addJavascriptInterface(TubeBridge(), "AndroidTube")
         setContentView(web)
 
-        // A file:// page has no normal HTTP referrer. Give the bundled page a
-        // stable HTTPS base URL so the YouTube iframe receives a referrer.
+        // Give the bundled page an HTTPS base URL for the YouTube iframe referrer.
         val html = assets.open("index.html").bufferedReader().use { it.readText() }
-        web.loadDataWithBaseURL(
-            "https://localhost/",
-            html,
-            "text/html",
-            "UTF-8",
-            null
-        )
+        web.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
+    }
+
+    private fun setImmersivePlayer(enabled: Boolean) {
+        window.decorView.systemUiVisibility = if (enabled) {
+            (View.SYSTEM_UI_FLAG_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE)
+        } else {
+            View.SYSTEM_UI_FLAG_VISIBLE
+        }
     }
 
     inner class TubeBridge {
@@ -89,7 +96,10 @@ class MainActivity : Activity() {
             }
         }
         @JavascriptInterface
-        fun setPlayerOpen(open: Boolean) { playerOpen = open }
+        fun setPlayerOpen(open: Boolean) {
+            playerOpen = open
+            runOnUiThread { setImmersivePlayer(open) }
+        }
     }
 
     private fun sendError(message: String) {
@@ -101,6 +111,7 @@ class MainActivity : Activity() {
         if (playerOpen) {
             web.evaluateJavascript("closePlayer()", null)
             playerOpen = false
+            setImmersivePlayer(false)
         } else super.onBackPressed()
     }
 
