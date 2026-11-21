@@ -28,7 +28,7 @@ class MainActivity : Activity() {
         web.setBackgroundColor(android.graphics.Color.rgb(15, 15, 15))
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true
-        web.settings.mediaPlaybackRequiresUserGesture = true
+        web.settings.mediaPlaybackRequiresUserGesture = false
         web.settings.allowFileAccess = true
         web.settings.allowContentAccess = false
         web.webViewClient = WebViewClient()
